@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <!-- Mandatory: Defines the XML schema and Maven version -->
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Project Identification (MUST BE UNIQUE) -->
+    <!-- Replace 'com.example' and 'nosql-project' with your team's identifiers -->
+    <groupId>com.example.marburg</groupId>
+    <artifactId>nosql-project</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <!-- General Project Properties -->
+    <properties>
+        <!-- Ensure Java 17 or higher is used, as it is modern practice -->
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <!-- Define a common version for Jackson for easier updates -->
+        <jackson.version>2.17.0</jackson.version>
+    </properties>
+
+    <!-- 
+        =====================================================================
+        DEPENDENCIES: The libraries your code needs to compile and run.
+        =====================================================================
+    -->
+    <dependencies>
+        
+        <!-- 1. Jackson Core: Low-level JSON handling -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- 2. Jackson Databind: Serialization (ObjectMapper, Read/Write JSON) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- 3. Jackson Annotations: For @JsonProperty, @JsonCreator, etc. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- 4. Jedis (If you use Redis as the KVStore) -->
+        <!-- You may need to uncomment and update this dependency if you are using Jedis/Redis -->
+        <!--
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+        -->
+
+    </dependencies>
+
+    <!-- 
+        =====================================================================
+        BUILD: Configuration for how Maven builds your project.
+        =====================================================================
+    -->
+    <build>
+        <plugins>
+            <!-- Compiler Plugin: Ensures the code is compiled using the specified Java version -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
