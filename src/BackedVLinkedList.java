@@ -2,6 +2,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import  provided_classes.KVStore;
 import  provided_classes.VersionList;
 import  provided_classes.Serializer;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 public class BackedVLinkedList <P> implements VersionList<P>, Serializer<P>{
     private final VLinkedList<P> list;
@@ -34,8 +35,8 @@ public class BackedVLinkedList <P> implements VersionList<P>, Serializer<P>{
         if (p != null) {
             try {
                 return objectMapper.writeValueAsString(p);
-            } catch (Exception e) {
-                return "";
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             }
         }
         return "";
@@ -46,8 +47,8 @@ public class BackedVLinkedList <P> implements VersionList<P>, Serializer<P>{
         if (serializedT != null && !serializedT.isEmpty()) {
             try {
                 return objectMapper.readValue(serializedT, (Class<P>) Object.class);
-            } catch (Exception e) {
-                return null;
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             }
         }
         return null;
