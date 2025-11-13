@@ -22,11 +22,9 @@ public class BackedVLinkedList <P> implements VersionList<P>, Serializer<P>{
 
     @Override
     public P findVisible(long timestamp) {
-        P result = list.findVisible(timestamp);
-        if (result != null) {
-            return deSerialize(store.get(String.valueOf(timestamp)));
-        }
-        return null;
+        // VLinkedList already stores the payload in memory
+        // The backing store is for persistence/durability
+        return list.findVisible(timestamp);
     }
 
     @Override

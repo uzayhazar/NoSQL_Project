@@ -28,13 +28,16 @@ public class VLinkedList<P> implements VersionList<P> {
 
     @Override
     public P findVisible(long timestamp) {
-          Node current = head;
-          if(current == null) return null;
-
-          while(current.timeStamp <= timestamp) {
-              current = current.next;
-          }
-        return current.payload;
+        Node current = head;
+        if (current == null) return null;
+        
+        // Find the newest version with timestamp <= requested timestamp
+        // The list is ordered newest first (head has highest timestamp)
+        while (current != null && current.timeStamp > timestamp) {
+            current = current.next;
+        }
+        
+        return current != null ? current.payload : null;
     }
 
 }
