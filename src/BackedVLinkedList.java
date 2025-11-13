@@ -1,5 +1,7 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
 import  provided_classes.KVStore;
+import  provided_classes.VersionList;
+import  provided_classes.Serializer;
 
 public class BackedVLinkedList <P> implements VersionList<P>, Serializer<P>{
     private final VLinkedList<P> list;
