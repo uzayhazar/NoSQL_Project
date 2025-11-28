@@ -6,7 +6,7 @@ import provided_classes.VersionListFactory;
 public class BackedFrugalSkiplistFactory<P> implements VersionListFactory<P> {
     @Override
     public VersionList<P> create(KVStore store, Serializer<P> serializer) {
-        return new BackedFrugalSkiplist<>(store);
+        return new BackedFrugalSkipList<>(store);
     }
 }
 
