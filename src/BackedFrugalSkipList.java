@@ -1,17 +1,17 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-import  provided_classes.KVStore;
-import  provided_classes.VersionList;
-import  provided_classes.Serializer;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import provided_classes.KVStore;
+import provided_classes.VersionList;
+import provided_classes.Serializer;
 
-public class BackedVLinkedList <P> implements VersionList<P>, Serializer<P>{
-    private final VLinkedList<P> list;
+public class BackedFrugalSkipList<P> implements VersionList<P>, Serializer<P> {
+    private final FrugalSkipList<P> list;
     private final KVStore store;
     private final ObjectMapper objectMapper;
 
-    public BackedVLinkedList(KVStore store) {
+    public BackedFrugalSkipList(KVStore store) {
         this.store = store;
-        this.list = new VLinkedList<>();
+        this.list = new FrugalSkipList<>();
         this.objectMapper = new ObjectMapper();
     }
 
@@ -23,9 +23,11 @@ public class BackedVLinkedList <P> implements VersionList<P>, Serializer<P>{
 
     @Override
     public P findVisible(long timestamp) {
-        // VLinkedList already stores the payload in memory
-        // The backing store is for persistence/durability
-        return list.findVisible(timestamp);
+        P result = list.findVisible(timestamp);
+        if (result != null) {
+            return deSerialize(store.get(String.valueOf(timestamp)));
+        }
+        return null;
     }
 
     @Override
