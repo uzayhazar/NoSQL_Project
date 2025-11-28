@@ -53,14 +53,11 @@
 
         <!-- 4. Jedis (If you use Redis as the KVStore) -->
         <!-- You may need to uncomment and update this dependency if you are using Jedis/Redis -->
-        <!--
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>5.1.0</version>
         </dependency>
-        -->
-
     </dependencies>
 
     <!-- 
