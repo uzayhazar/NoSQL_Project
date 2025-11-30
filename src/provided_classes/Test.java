@@ -33,6 +33,10 @@ public class Test {
         // Test with BackedFrugalSkiplist
         System.out.println("\n--- Testing with BackedFrugalSkiplist ---");
         testWithImplementation(data, "BackedFrugalSkiplist");
+        
+        // Test with BackedVWeaverFrugalSkiplist (Task 1.4)
+        System.out.println("\n--- Testing with BackedVWeaverFrugalSkiplist (VWeaver) ---");
+        testVWeaver(data);
     }
 
     private static void testWithImplementation(List<Map.Entry<String, Payload>> data, String implName) {
@@ -105,6 +109,10 @@ public class Test {
         // Benchmark BackedFrugalSkiplist
         System.out.println("\n=== Benchmarking BackedFrugalSkiplist ===");
         benchmarkImplementation(data, "BackedFrugalSkiplist", timestamps, warmupRuns, benchmarkRuns);
+        
+        // Benchmark BackedVWeaverMVM (Task 1.4)
+        System.out.println("\n=== Benchmarking BackedVWeaverMVM (VWeaver) ===");
+        benchmarkVWeaver(data, timestamps, warmupRuns, benchmarkRuns);
     }
 
     private static void benchmarkImplementation(List<Map.Entry<String, Payload>> data, String implName, 
@@ -206,6 +214,196 @@ public class Test {
             
         } catch (Exception e) {
             throw new RuntimeException("Error in benchmark iteration", e);
+        }
+    }
+
+    /**
+     * Test VWeaver implementation (Task 1.4)
+     */
+    private static void testVWeaver(List<Map.Entry<String, Payload>> data) {
+        try {
+            // Create JedisKVStore
+            Class<?> jedisKVStoreClass = Class.forName("JedisKVStore");
+            FlushableKVStore store = (FlushableKVStore) jedisKVStoreClass.getDeclaredConstructor().newInstance();
+            
+            // Flush DB before test
+            store.flushDB();
+            
+            // Create factory for VWeaver Frugal Skiplist
+            Class<?> factoryClass = Class.forName("BackedVWeaverFrugalSkiplistFactory");
+            VersionListFactory<Payload> factory = (VersionListFactory<Payload>) factoryClass.getDeclaredConstructor().newInstance();
+            
+            // Create BackedVWeaverMVM
+            Class<?> mvmClass = Class.forName("BackedVWeaverMVM");
+            MultiVersionMap<String, Payload> mvm = (MultiVersionMap<String, Payload>) 
+                mvmClass.getDeclaredConstructor(VersionListFactory.class, KVStore.class).newInstance(factory, store);
+            
+            // Insert data
+            long startInsert = System.nanoTime();
+            for (Map.Entry<String, Payload> entry : data) {
+                mvm.append(entry.getKey(), entry.getValue());
+            }
+            long endInsert = System.nanoTime();
+            System.out.println("Insertion time: " + (endInsert - startInsert) / 1_000_000.0 + " ms");
+            
+            // Query range snapshot
+            System.out.println("\nRange snapshot [KEY002, KEY004] at timestamp 20:");
+            Iterator<Map.Entry<String, Payload>> snapshot = mvm.rangeSnapshot("KEY002", true, "KEY004", true, 20);
+            while (snapshot.hasNext()) {
+                Map.Entry<String, Payload> entry = snapshot.next();
+                System.out.println(entry.getKey() + "=" + entry.getValue());
+            }
+            
+            // Expected output (should match other implementations):
+            // KEY002=Payload[title=Some Title for KEY002, comment=Change 3 for key KEY002, timestamp=19]
+            // KEY003=Payload[title=Some Title for KEY003, comment=Change 4 for key KEY003, timestamp=20]
+            // KEY004=Payload[title=Some Title for KEY004, comment=Change 3 for key KEY004, timestamp=13]
+            
+            store.flushDB();
+            
+        } catch (Exception e) {
+            System.err.println("Error testing VWeaver: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Benchmark VWeaver implementation (Task 1.4)
+     */
+    private static void benchmarkVWeaver(List<Map.Entry<String, Payload>> data, 
+                                          long[] timestamps, int warmupRuns, int benchmarkRuns) {
+        try {
+            // Warmup
+            for (int i = 0; i < warmupRuns; i++) {
+                runVWeaverBenchmarkIteration(data, timestamps, false);
+            }
+            
+            // Actual benchmark
+            List<Long> insertionTimes = new ArrayList<>();
+            List<List<Long>> queryTimes = new ArrayList<>();
+            List<List<Long>> rangeQueryTimes = new ArrayList<>();
+            for (int i = 0; i < timestamps.length; i++) {
+                queryTimes.add(new ArrayList<>());
+                rangeQueryTimes.add(new ArrayList<>());
+            }
+            
+            for (int i = 0; i < benchmarkRuns; i++) {
+                VWeaverBenchmarkResult result = runVWeaverBenchmarkIteration(data, timestamps, false);
+                insertionTimes.add(result.insertionTime);
+                for (int j = 0; j < timestamps.length; j++) {
+                    queryTimes.get(j).add(result.queryTimes.get(j));
+                    rangeQueryTimes.get(j).add(result.rangeQueryTimes.get(j));
+                }
+            }
+            
+            // Calculate and print averages
+            System.out.println("\n--- Results (average of " + benchmarkRuns + " runs) ---");
+            System.out.printf("Average insertion time: %.2f ms\n", average(insertionTimes) / 1_000_000.0);
+            System.out.println("\nFull-range snapshot query times:");
+            for (int i = 0; i < timestamps.length; i++) {
+                System.out.printf("  Timestamp %,d: %.3f ms\n", timestamps[i], average(queryTimes.get(i)) / 1_000_000.0);
+            }
+            System.out.println("\nRange snapshot query times (first 10% of keys):");
+            for (int i = 0; i < timestamps.length; i++) {
+                System.out.printf("  Timestamp %,d: %.3f ms\n", timestamps[i], average(rangeQueryTimes.get(i)) / 1_000_000.0);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error benchmarking VWeaver: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static class VWeaverBenchmarkResult {
+        long insertionTime;
+        List<Long> queryTimes;
+        List<Long> rangeQueryTimes;
+        
+        VWeaverBenchmarkResult(long insertionTime, List<Long> queryTimes, List<Long> rangeQueryTimes) {
+            this.insertionTime = insertionTime;
+            this.queryTimes = queryTimes;
+            this.rangeQueryTimes = rangeQueryTimes;
+        }
+    }
+
+    private static VWeaverBenchmarkResult runVWeaverBenchmarkIteration(List<Map.Entry<String, Payload>> data, 
+                                                                      long[] timestamps, boolean verbose) {
+        try {
+            // Create JedisKVStore
+            Class<?> jedisKVStoreClass = Class.forName("JedisKVStore");
+            FlushableKVStore store = (FlushableKVStore) jedisKVStoreClass.getDeclaredConstructor().newInstance();
+            
+            // Flush DB before benchmark
+            store.flushDB();
+            
+            // Create factory for VWeaver Frugal Skiplist
+            Class<?> factoryClass = Class.forName("BackedVWeaverFrugalSkiplistFactory");
+            VersionListFactory<Payload> factory = (VersionListFactory<Payload>) factoryClass.getDeclaredConstructor().newInstance();
+            
+            // Create BackedVWeaverMVM
+            Class<?> mvmClass = Class.forName("BackedVWeaverMVM");
+            MultiVersionMap<String, Payload> mvm = (MultiVersionMap<String, Payload>) 
+                mvmClass.getDeclaredConstructor(VersionListFactory.class, KVStore.class).newInstance(factory, store);
+            
+            // Measure insertion time
+            long startInsert = System.nanoTime();
+            for (Map.Entry<String, Payload> entry : data) {
+                mvm.append(entry.getKey(), entry.getValue());
+            }
+            long endInsert = System.nanoTime();
+            long insertionTime = endInsert - startInsert;
+            
+            // Measure query times (full snapshot)
+            List<Long> queryTimes = new ArrayList<>();
+            for (long timestamp : timestamps) {
+                long startQuery = System.nanoTime();
+                Iterator<Map.Entry<String, Payload>> snapshot = mvm.snapshot(timestamp);
+                int count = 0;
+                while (snapshot.hasNext()) {
+                    snapshot.next();
+                    count++;
+                }
+                long endQuery = System.nanoTime();
+                queryTimes.add(endQuery - startQuery);
+                
+                if (verbose) {
+                    System.out.printf("Full snapshot at %,d returned %d entries in %.3f ms\n", 
+                        timestamp, count, (endQuery - startQuery) / 1_000_000.0);
+                }
+            }
+            
+            // Measure range query times (to test kRidgy optimization)
+            List<Long> rangeQueryTimes = new ArrayList<>();
+            // Find first and last keys for range query
+            String firstKey = data.get(0).getKey();
+            String lastKey = data.get(data.size() - 1).getKey();
+            // Use a subset (first 10% of keys) for range query
+            int rangeSize = Math.max(1, data.size() / 10);
+            String rangeEndKey = data.get(Math.min(rangeSize - 1, data.size() - 1)).getKey();
+            
+            for (long timestamp : timestamps) {
+                long startQuery = System.nanoTime();
+                Iterator<Map.Entry<String, Payload>> rangeSnapshot = mvm.rangeSnapshot(firstKey, true, rangeEndKey, true, timestamp);
+                int count = 0;
+                while (rangeSnapshot.hasNext()) {
+                    rangeSnapshot.next();
+                    count++;
+                }
+                long endQuery = System.nanoTime();
+                rangeQueryTimes.add(endQuery - startQuery);
+                
+                if (verbose) {
+                    System.out.printf("Range snapshot [%s, %s] at %,d returned %d entries in %.3f ms\n", 
+                        firstKey, rangeEndKey, timestamp, count, (endQuery - startQuery) / 1_000_000.0);
+                }
+            }
+            
+            store.flushDB();
+            
+            return new VWeaverBenchmarkResult(insertionTime, queryTimes, rangeQueryTimes);
+            
+        } catch (Exception e) {
+            throw new RuntimeException("Error in VWeaver benchmark iteration", e);
         }
     }
 
