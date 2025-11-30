@@ -15,7 +15,7 @@ public class Test {
     public static void main(String[] args) {
         // Uncomment the test or benchmark you want to run
         
-        // runTest();
+        runTest();
         // runBenchmark();
     }
 

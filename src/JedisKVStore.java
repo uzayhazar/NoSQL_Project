@@ -35,7 +35,7 @@ public class JedisKVStore implements FlushableKVStore {
     }
 
     public void close() {
-        if (jedisPool != null && !jedisPool.isClosed()) {
+        if (jedisPool != null) {
             jedisPool.close();
         }
     }
